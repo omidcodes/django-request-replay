@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     "request_logger",
+    "command_queue_simulation",
 ]
 
 MIDDLEWARE = [
