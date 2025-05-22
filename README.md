@@ -1,5 +1,8 @@
-
 # 🛠️ Django Request Replay
+
+![License](https://img.shields.io/github/license/omidcodes/django-request-replay)
+![Python Version](https://img.shields.io/badge/python-3.10+-blue)
+![Django](https://img.shields.io/badge/django-4.2+-green)
 
 ## 📌 Project Overview
 
@@ -32,9 +35,25 @@ This solution not only resolved the immediate issue of system state preservation
 
 ---
 
+## 🗺️ Architecture Diagram
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Middleware
+    participant DB
+    participant InMemoryQueue
+
+    Client->>Middleware: POST /api/commands
+    Middleware->>InMemoryQueue: Push command to SIMULATED_STATE
+    Middleware-->>DB: Save request if eligible
+```
+
+---
+
 ## ⚙️ Configuration
 
-The logging behavior can be controlled in `settings.py` using the following keys:
+All settings are placed in `settings.py`:
 
 ```python
 DJANGO_REQUESTS_HISTORY_ENABLE = True
@@ -58,7 +77,14 @@ POST /api/commands
 
 This command will:
 - Be saved in memory (`SIMULATED_STATE`)
-- Be logged persistently by the middleware if eligible
+- Be logged persistently by the middleware if it meets the configured criteria
+
+> 🔄 (Planned) Replay from logs:
+```bash
+python manage.py replay_logged_requests
+# or
+POST /api/replay-last
+```
 
 ---
 
@@ -103,6 +129,27 @@ python manage.py runserver
 
 - API or management command to replay stored requests
 - Admin view with dynamic filters and labels
+- Queryable replay history dashboard
+
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes
+4. Push to the branch
+5. Open a Pull Request
+
+---
+
+## 🧪 Running Tests
+
+```bash
+python manage.py test
+```
 
 ---
 
