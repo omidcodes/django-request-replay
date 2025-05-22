@@ -4,6 +4,14 @@
 ![Python Version](https://img.shields.io/badge/python-3.10+-blue)
 ![Django](https://img.shields.io/badge/django-4.2+-green)
 
+
+## ℹ️ About
+
+This project was built to solve a real-world challenge involving volatile stateful systems in production environments. It combines a Django middleware for request logging and a simulation of an in-memory command queue to enable robust state reproduction and debugging capabilities.
+
+The key motivation behind this project was the inability of standard logging or monitoring tools to accurately replicate the conditions that led to internal server errors or data loss after reboots. By capturing and persisting relevant API requests, this system allows developers and DevOps teams to restore system state, investigate issues thoroughly, and simulate critical workflows.
+
+
 ## 📌 Project Overview
 
 In a recent project, our team encountered a significant challenge with a **stateful system** that would revert to factory settings after reboots or power losses. Additionally, there was a need for a mechanism to **accurately reproduce system states** for debugging purposes when customers encountered internal server errors. Traditional methods like system logs and error-tracking tools such as Sentry were insufficient for replicating exact requests in a raw debugging environment.
@@ -156,3 +164,5 @@ python manage.py test
 ## © License
 
 MIT License
+
+> Built by **Omid Hashemzadeh** for better system observability and state resilience in Django-based backends.
