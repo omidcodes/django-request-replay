@@ -22,8 +22,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     path('api/simulation/', include('command_queue_simulation.urls')),
+    path('api/command-history/', include('request_logger.urls')),
+    
 
-      # OpenAPI schema
+    # OpenAPI schema
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/docs/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
