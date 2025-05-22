@@ -1,13 +1,34 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema
 
-# ---------------------------
 # In-memory store for testing replay
-# ---------------------------
 SIMULATED_STATE = {
     "command_queue": []
 }
 
+
+@extend_schema(
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'command': {'type': 'string', 'example': 'restart wifi'}
+            },
+            'required': ['command']
+        }
+    },
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'status': {'type': 'string'},
+                'command': {'type': 'string'},
+                'queue': {'type': 'array', 'items': {'type': 'string'}}
+            }
+        }
+    }
+)
 @api_view(["POST"])
 def enqueue_command(request):
     cmd = request.data.get("command")
