@@ -1,9 +1,9 @@
+
 # 🛠️ Django Request Replay
 
 ![License](https://img.shields.io/github/license/omidcodes/django-request-replay)
 ![Python Version](https://img.shields.io/badge/python-3.10+-blue)
 ![Django](https://img.shields.io/badge/django-4.2+-green)
-
 
 ## ℹ️ About
 
@@ -11,6 +11,11 @@ This project was built to solve a real-world challenge involving volatile statef
 
 The key motivation behind this project was the inability of standard logging or monitoring tools to accurately replicate the conditions that led to internal server errors or data loss after reboots. By capturing and persisting relevant API requests, this system allows developers and DevOps teams to restore system state, investigate issues thoroughly, and simulate critical workflows.
 
+> “Replay” in this context refers to re-executing previously logged API requests to simulate or restore a previous system state.
+
+**Target Audience**: Backend developers, DevOps engineers, QA teams, and anyone working with stateful Django systems.
+
+---
 
 ## 📌 Project Overview
 
@@ -74,7 +79,7 @@ DJANGO_REQUESTS_HISTORY_VISIBLE_COLUMNS = "__all__"
 
 ---
 
-## 🧪 Example Use Case
+## 🧪 Use Case: Replaying Critical API Calls After System Crash
 
 ```http
 POST /api/commands
@@ -89,8 +94,11 @@ This command will:
 
 > 🔄 (Planned) Replay from logs:
 ```bash
+# This command would re-send all stored API requests
+# to rebuild the system’s state as it was before a failure.
 python manage.py replay_logged_requests
-# or
+
+# or via API
 POST /api/replay-last
 ```
 
@@ -116,6 +124,14 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+➡️ **Don’t forget to add the middleware in `settings.py`:**
+
+```python
+MIDDLEWARE += [
+    'request_logger.middlewares.DjangoRequestsHistoryMiddleware',
+]
+```
+
 ---
 
 ## 📂 Project Structure
@@ -131,6 +147,8 @@ python manage.py runserver
 │   └── ...
 ```
 
+> This reflects the core logic — not all files are shown.
+
 ---
 
 ## 🔄 Future Improvements
@@ -138,6 +156,7 @@ python manage.py runserver
 - API or management command to replay stored requests
 - Admin view with dynamic filters and labels
 - Queryable replay history dashboard
+- Async request logging with Celery or background workers
 
 ---
 
