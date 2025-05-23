@@ -64,6 +64,45 @@ sequenceDiagram
 
 ---
 
+## 🧩 Replay Tool: `cli/apply_history_db.py`
+
+When a command like the following is POSTed:
+
+```http
+POST /api/commands
+{
+  "command": "restart wifi"
+}
+```
+
+It is stored in memory (`SIMULATED_STATE`) and logged persistently if eligible.
+
+To **replay** such logged requests and restore the system’s last known state, use the provided standalone script:
+
+📄 Located under the `cli/` directory next to `manage.py`:
+```
+django_request_replay/
+├── manage.py
+├── cli/
+│   └── apply_history_db.py
+```
+
+### Example usage:
+```bash
+python3 cli/apply_history_db.py \
+    --db-file ./django_request_replay/db.sqlite3 \
+    --base-url http://127.0.0.1:8000 \
+    --excluded-urls /api/v1/health/ /api/v1/internal/
+```
+
+### Features:
+- Replays critical API requests for recovery or debugging
+- Supports interactive and dry-run modes
+- Filters requests by method, path, and ID range
+- Works independently of Django runtime
+
+---
+
 ## ⚙️ Configuration
 
 All settings are placed in `settings.py`:
@@ -75,31 +114,6 @@ DJANGO_REQUESTS_HISTORY_EXCLUDING_URL_NAMES = ()
 DJANGO_REQUESTS_HISTORY_VIEW_FILTER = {}
 DJANGO_REQUESTS_HISTORY_VIEW_ORDER_BY = "created"
 DJANGO_REQUESTS_HISTORY_VISIBLE_COLUMNS = "__all__"
-```
-
----
-
-## 🧪 Use Case: Replaying Critical API Calls After System Crash
-
-```http
-POST /api/commands
-{
-  "command": "restart wifi"
-}
-```
-
-This command will:
-- Be saved in memory (`SIMULATED_STATE`)
-- Be logged persistently by the middleware if it meets the configured criteria
-
-> 🔄 (Planned) Replay from logs:
-```bash
-# This command would re-send all stored API requests
-# to rebuild the system’s state as it was before a failure.
-python manage.py replay_logged_requests
-
-# or via API
-POST /api/replay-last
 ```
 
 ---
@@ -132,18 +146,23 @@ MIDDLEWARE += [
 ]
 ```
 
+➡️ API Docs available at: [http://127.0.0.1:8000/api/docs/swagger/#/](http://127.0.0.1:8000/api/docs/swagger/#/)
+
 ---
 
 ## 📂 Project Structure
 
 ```
+├── manage.py
+├── cli/
+│   └── apply_history_db.py       # Standalone request replayer script
 ├── request_logger/
-│   ├── middlewares.py       # Request logging middleware
-│   ├── models.py            # DjangoRequestsHistoryModel
-│   ├── conf.py              # Configuration parser
+│   ├── middlewares.py            # Request logging middleware
+│   ├── models.py                 # DjangoRequestsHistoryModel
+│   ├── conf.py                   # Configuration parser
 │   └── ...
 ├── command_queue_simulation/
-│   ├── views.py             # Simulated in-memory queue logic
+│   ├── views.py                  # Simulated in-memory queue logic
 │   └── ...
 ```
 
@@ -153,10 +172,8 @@ MIDDLEWARE += [
 
 ## 🔄 Future Improvements
 
-- API or management command to replay stored requests
 - Admin view with dynamic filters and labels
 - Queryable replay history dashboard
-- Async request logging with Celery or background workers
 
 ---
 

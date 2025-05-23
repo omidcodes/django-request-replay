@@ -394,7 +394,7 @@ class Configuration:
             description="Replay HTTP Requests from SQLite Database",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,  # Use the formatter class here
         )
-        parser.add_argument('-f', '--db-file', type=str, default='./django_request_replay/db.sqlite3',
+        parser.add_argument('-f', '--db-file', type=str, default='django_request_replay/db.sqlite3',
                             help='Path to SQLite database file [either absolute or relative path.]')
         parser.add_argument('-b', '--base-url', type=str, default='http://127.0.0.1:8000', help='Base URL of this project')
         parser.add_argument('-e', '--excluded-urls', nargs='*', default=DEFAULT_EXCLUDED_URLS,
