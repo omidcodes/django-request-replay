@@ -8,10 +8,9 @@ sqlite database (history.sqlite.3)
 Sample usage:
 python3 scripts/apply_history_db.py \
     --db-file scripts/history.sqlite.3.test \
-    --base-url http://192.168.113.193 \
+    --base-url http://192.168.1.100 \
     --excluded-urls \
-        /api/v1/firewall/sys-sessions/query-by-filter/ \
-        /api/v1/networking/event-receiver/
+        /api/v1/sample-api/
 """
 import argparse
 import dataclasses
@@ -21,15 +20,14 @@ import shutil
 import sqlite3
 import subprocess  # nosec
 import sys
-from getpass import getpass
 from pathlib import Path
 from typing import Any, Final, List, Optional, TextIO, Tuple
 
+
+import requests
+from prettytable import HRuleStyle, PrettyTable, PrettyTable
+
 HISTORY_CONFIG_TABLE_NAME: Final[str] = 'request_logger_djangorequestshistorymodel'
-REQUIRED_APT_PACKAGES = ["python3-pip"]
-REQUIRED_PIP_PACKAGES = ['requests', 'prettytable']
-DEFAULT_ADMIN_USERNAME: Final[str] = "admin"
-DEFAULT_ADMIN_PASSWORD: Final[str] = "admin"
 MAX_COLUMN_WIDTH: Final[int] = 50
 MAX_CELL_LENGTH: Final[int] = 1500
 DEFAULT_EXCLUDED_URLS: Final[List[str]] = []
@@ -43,9 +41,9 @@ class ColumnNames:
     label: str = "label"
     request_method: str = "request_method"
     request_path: str = "request_path"
-    request_data: str = "request_data"
+    request_data: str = "request_data_binary"
     response_code: str = "response_code"
-    response_data: str = "response_data"
+    # response_data: str = "response_data"
 
     @property
     def table_displaying_names(self) -> tuple:
@@ -223,7 +221,7 @@ class Row:
         return iter(items)
 
 
-class NSGPrettyTableWrapper:
+class PrettyTableWrapper:
     def __init__(self, columns: tuple, max_width: int, enable_less: bool):
         """
         Prints a table
@@ -231,7 +229,6 @@ class NSGPrettyTableWrapper:
         :param max_width: maximum width of each column
         :param enable_less: if True, output will be given to Less
         """
-        from prettytable import PrettyTable  # pylint: disable=import-error
         self.align = "l"
         self.__columns_displaying_names: tuple = columns
         self.__max_width = max_width
@@ -256,7 +253,6 @@ class NSGPrettyTableWrapper:
     @records.setter
     def records(self, records: List[Row]):
         """ sets table records """
-        from prettytable import PrettyTable
         self.__records = records
         self.__prepare_table()
         assert isinstance(self.__pretty_table, PrettyTable)
@@ -273,9 +269,7 @@ class NSGPrettyTableWrapper:
 
     def __prepare_table(self):
         """ prepare the PrettyTable object """
-        from prettytable import ALL  # pylint: disable=import-error
-        from prettytable import PrettyTable
-        self.__pretty_table = PrettyTable(align=self.align, hrules=ALL)
+        self.__pretty_table = PrettyTable(align=self.align, hrules=HRuleStyle.ALL)
 
         self.__pretty_table.field_names = self.__columns_displaying_names
         self.__set_max_width()
@@ -315,8 +309,6 @@ class DatabaseTableManager:
                 # Create a cursor object using the connection.
                 cursor = conn.cursor()
                 query = f'SELECT {", ".join(self.__column_names)} FROM {self.__table_name}'
-                if not configuration.show_internal_requests:
-                    query += ' WHERE label!=internal'
                 cursor.execute(query)
                 # Fetch all results and store them in a variable.
                 rows = cursor.fetchall()
@@ -347,12 +339,12 @@ class HistoryDatabaseManager(DatabaseTableManager):
             db_path: str,
             start_from_id: int,
             excluded_urls: List[str],
-            pretty: NSGPrettyTableWrapper,
+            pretty: PrettyTableWrapper,
             table_name: str,
             column_names: tuple,
     ) -> None:
         super().__init__(db_path, table_name, column_names)
-        self.__pretty_table: NSGPrettyTableWrapper = pretty
+        self.__pretty_table: PrettyTableWrapper = pretty
         self.__excluded_urls = excluded_urls
         self.__start_from_id: int = start_from_id
 
@@ -384,22 +376,18 @@ class Configuration:
     """ Holds user configuration """
     db_file: str
     base_url: str
-    username: str
-    password: str
     excluded_urls: List[str]
     dry_run: bool
     show_internal_requests: bool
     max_column_width: int
     interactive: bool
     skip_request_errors: bool
-    only_install_requirements: bool
     start_from_id: int
 
     @classmethod
     def from_parse_args(cls) -> "Configuration":
         parsed_args: argparse.Namespace = cls.parse_args()
-        password = cls.get_admin_password(dry_run=parsed_args.dry_run)
-        conf = Configuration(**parsed_args.__dict__, password=password)
+        conf = Configuration(**parsed_args.__dict__)
         cls.validate(conf)
         return conf
 
@@ -409,12 +397,9 @@ class Configuration:
             description="Replay HTTP Requests from SQLite Database",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,  # Use the formatter class here
         )
-        parser.add_argument('-f', '--db-file', type=str, default='/var/nsg4/db/history.sqlite3',
+        parser.add_argument('-f', '--db-file', type=str, default='/home/omid/ProgrammingProjects/github_projects/django-request-replay/django_request_replay/db.sqlite3', # TODO : CHANGE ME ....
                             help='Path to SQLite database file')
-        parser.add_argument('-b', '--base-url', type=str, default='http://127.0.0.1',
-                            help='Base URL for NSG4')
-        parser.add_argument('-u', '--username', type=str, default=DEFAULT_ADMIN_USERNAME,
-                            help='Default admin username for NSG4')
+        parser.add_argument('-b', '--base-url', type=str, default='http://127.0.0.1:8000', help='Base URL of this project')
         parser.add_argument('-e', '--excluded-urls', nargs='*', default=DEFAULT_EXCLUDED_URLS,
                             help='List of URLs to exclude')
         parser.add_argument('-m', '--start-from-id', type=int, default=1,
@@ -429,10 +414,6 @@ class Configuration:
                             help='Enables interactive mode to ask execution of each command from the user.')
         parser.add_argument('-s', '--skip-request-errors', action='store_true', default=False,
                             help='If error 4xx and 5xx occurs, skip them.')
-        parser.add_argument('-r', '--only-install-requirements', action='store_true', default=False,
-                            help=f'Installs all the requirements and then exit. '
-                                 f'PIP: {", ".join(REQUIRED_PIP_PACKAGES)}'
-                                 f'APT: {", ".join(REQUIRED_APT_PACKAGES)}')
 
         return parser.parse_args()
 
@@ -444,21 +425,9 @@ class Configuration:
         if not conf.dry_run and conf.show_internal_requests:
             raise ValueError("'show-internal-requests' can be used only in 'dry-run' mode")
 
-    @staticmethod
-    def get_admin_password(dry_run: bool) -> str:
-        """ gets admin password """
-        if not dry_run:
-            return CommandLineInterfaceUtils.get_password()
-        return DEFAULT_ADMIN_PASSWORD
-
 
 class CommandLineInterfaceUtils:
-    @staticmethod
-    def get_password(prompt="Password: ") -> str:
-        """ Prompt the user for a password without echoing."""
-        return getpass(prompt=prompt)
 
-    # TODO: move this elsewhere
     @classmethod
     def ask_yes_no(cls, question: str, default=DEFAULT_INTERACTIVE_ASK_YES_NO_ANSWER) -> bool:
         """
@@ -490,13 +459,11 @@ class RequestReplayer:
             self,
             db_man: HistoryDatabaseManager,
             command_line_interface: CommandLineInterfaceUtils,
-            pretty: NSGPrettyTableWrapper,
+            pretty: PrettyTableWrapper,
             conf: Configuration,
     ) -> None:
-        self.__pretty_table: NSGPrettyTableWrapper = pretty
+        self.__pretty_table: PrettyTableWrapper = pretty
         self.__base_url: str = conf.base_url
-        self.__username: str = conf.username
-        self.__password: str = conf.password
         self.__interactive: bool = conf.interactive
         self.__skip_request_errors: Final[bool] = conf.skip_request_errors
         self.__db_manager = db_man
@@ -506,7 +473,6 @@ class RequestReplayer:
 
 
     def __send_request(self, url: str, method: str, **kwargs):
-        import requests
         try:
             headers = {
                 'Accept': 'application/json',
@@ -630,7 +596,7 @@ if __name__ == "__main__":
     configuration: Configuration = Configuration.from_parse_args()
 
     print_colored(f'excluded_urls: \n\t{configuration.excluded_urls}\n')
-    pretty_obj = NSGPrettyTableWrapper(
+    pretty_obj = PrettyTableWrapper(
         columns=ColumnNames().table_displaying_names,
         max_width=configuration.max_column_width,
         enable_less=configuration.interactive,
