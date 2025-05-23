@@ -26,7 +26,3 @@ class DjangoRequestsHistoryModel(models.Model):
     created = models.DateTimeField(_("Created"), auto_now_add=True)
 
     label = models.CharField(_("Label"), max_length=255, null=True)
-
-    # request_data = models.BinaryField(
-    #     blank=True,
-    # )

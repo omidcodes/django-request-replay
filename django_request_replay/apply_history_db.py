@@ -292,7 +292,7 @@ class DatabaseTableManager:
             table_name: str,
             column_names: tuple,
     ) -> None:
-        self.db_path: Path = Path(db_path)
+        self.db_path: Path = Path(db_path).expanduser().resolve()
         self.__validate_if_db_exists()
         self.__table_name: str = table_name
         self.__column_names: tuple = column_names
@@ -301,6 +301,7 @@ class DatabaseTableManager:
         if not self.db_path.exists():
             msg: Final[str] = f"DB '{self.db_path}' does not exist."
             exit_with_message(msg)
+
 
     def __fetch_rows(self) -> List[Tuple[Any, ...]]:
         try:
@@ -353,9 +354,6 @@ class HistoryDatabaseManager(DatabaseTableManager):
         """ gets sanitized records from sqlite database """
         sanitized_records: List[Row] = []
         rows = self.records
-        max_show_internal_requests = len(rows)
-        if self.__start_from_id > len(rows):
-            raise ValueError(f"Max 'show-internal-requests' is '{max_show_internal_requests}'")
         for row in rows:
             path = row[ColumnNames.request_path]
             if path not in self.__excluded_urls:
@@ -378,7 +376,6 @@ class Configuration:
     base_url: str
     excluded_urls: List[str]
     dry_run: bool
-    show_internal_requests: bool
     max_column_width: int
     interactive: bool
     skip_request_errors: bool
@@ -397,8 +394,8 @@ class Configuration:
             description="Replay HTTP Requests from SQLite Database",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,  # Use the formatter class here
         )
-        parser.add_argument('-f', '--db-file', type=str, default='/home/omid/ProgrammingProjects/github_projects/django-request-replay/django_request_replay/db.sqlite3', # TODO : CHANGE ME ....
-                            help='Path to SQLite database file')
+        parser.add_argument('-f', '--db-file', type=str, default='./django_request_replay/db.sqlite3',
+                            help='Path to SQLite database file [either absolute or relative path.]')
         parser.add_argument('-b', '--base-url', type=str, default='http://127.0.0.1:8000', help='Base URL of this project')
         parser.add_argument('-e', '--excluded-urls', nargs='*', default=DEFAULT_EXCLUDED_URLS,
                             help='List of URLs to exclude')
@@ -406,8 +403,6 @@ class Configuration:
                             help='Starts reproducing requests from row number <start-from-id>')
         parser.add_argument('-d', '--dry-run', action='store_true',
                             help='Prints all the requests except excluded')
-        parser.add_argument('-n', '--show-internal-requests', action='store_true',
-                            help='Can be used only in dry run')
         parser.add_argument('-w', '--max-column-width', type=int, default=MAX_COLUMN_WIDTH,
                             help='List of URLs to exclude')
         parser.add_argument('-i', '--interactive', action='store_true', default=False,
@@ -422,8 +417,6 @@ class Configuration:
         """ validates user input """
         if conf.start_from_id <= 0:
             raise ValueError("'start-from-id' must be a positive integer")
-        if not conf.dry_run and conf.show_internal_requests:
-            raise ValueError("'show-internal-requests' can be used only in 'dry-run' mode")
 
 
 class CommandLineInterfaceUtils:
