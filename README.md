@@ -13,7 +13,7 @@ The key motivation behind this project was the inability of standard logging or 
 
 > “Replay” in this context refers to re-executing previously logged API requests to simulate or restore a previous system state.
 
-**Target Audience**: Backend developers, DevOps engineers, QA teams, and anyone working with stateful Django systems.
+**Target Audience**: Backend developers, DevOps engineers, QA teams, Software Testers, and anyone working with stateful Django systems.
 
 ---
 
