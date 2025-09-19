@@ -148,6 +148,8 @@ MIDDLEWARE += [
 
 ➡️ API Docs available at: [http://127.0.0.1:8000/api/docs/swagger/#/](http://127.0.0.1:8000/api/docs/swagger/#/)
 
+➡️ To test it, simply use `POST /api/simulation/queue/` to simulate adding a command to a queue and use `GET api/command-history/requests-history/` to read the request history.
+
 ---
 
 ## 📂 Project Structure
